@@ -6,6 +6,7 @@ struct PublishView: View {
     @State private var draftState = "草稿"
     @State private var photoTiles: [Int] = []
     @State private var nextPhotoID = 1
+    @FocusState private var focusedField: PublishField?
 
     private var titleByteCount: Int {
         title.reduce(0) { partialResult, character in
@@ -42,6 +43,11 @@ struct PublishView: View {
 
                         FieldBlock(label: "标题", counter: "\(titleByteCount)/40B", isOverLimit: titleByteCount > 40) {
                             TextField("例如：窗边蓝调光的一组速写", text: $title)
+                                .focused($focusedField, equals: .title)
+                                .submitLabel(.done)
+                                .onSubmit {
+                                    focusedField = nil
+                                }
                                 .font(.system(size: 15, weight: .medium))
                                 .foregroundStyle(HuahuoTheme.foreground)
                                 .padding(.horizontal, 14)
@@ -55,6 +61,7 @@ struct PublishView: View {
 
                         FieldBlock(label: "详情", counter: "\(detail.count)", isOverLimit: false) {
                             TextEditor(text: $detail)
+                                .focused($focusedField, equals: .detail)
                                 .font(.system(size: 15, weight: .medium))
                                 .foregroundStyle(HuahuoTheme.foreground)
                                 .scrollContentBackground(.hidden)
@@ -113,6 +120,17 @@ struct PublishView: View {
             }
         }
         .navigationBarHidden(true)
+        .safeAreaInset(edge: .bottom, alignment: .trailing, spacing: 0) {
+            if focusedField != nil {
+                PublishKeyboardDoneButton {
+                    focusedField = nil
+                }
+                .padding(.trailing, 16)
+                .padding(.bottom, 10)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
+        .animation(.spring(response: 0.24, dampingFraction: 0.86), value: focusedField != nil)
         .onChange(of: title) { _, newValue in
             trimTitleIfNeeded(newValue)
             draftState = "编辑中"
@@ -157,6 +175,11 @@ struct PublishView: View {
     }
 }
 
+private enum PublishField: Hashable {
+    case title
+    case detail
+}
+
 private struct PublishTopBar: View {
     let draftState: String
     var onCancel: () -> Void
@@ -183,6 +206,27 @@ private struct PublishTopBar: View {
                 .frame(width: 68, height: 36)
                 .background(.white.opacity(0.58), in: Capsule())
         }
+    }
+}
+
+private struct PublishKeyboardDoneButton: View {
+    var onDone: () -> Void
+
+    var body: some View {
+        Button(action: onDone) {
+            Text("完成")
+                .font(.system(size: 15, weight: .heavy))
+                .foregroundStyle(.white)
+                .frame(width: 82, height: 38)
+                .background(HuahuoTheme.accent, in: Capsule())
+                .overlay {
+                    Capsule()
+                        .stroke(.white.opacity(0.70), lineWidth: 1)
+                }
+                .shadow(color: HuahuoTheme.accent.opacity(0.22), radius: 12, y: 6)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("完成编辑")
     }
 }
 
