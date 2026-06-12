@@ -194,43 +194,62 @@ private struct PhotoGrid: View {
     var body: some View {
         LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 9), count: 3), spacing: 9) {
             ForEach(Array(photoTiles.enumerated()), id: \.element) { index, id in
-                ZStack(alignment: .topTrailing) {
-                    ArtworkView(style: InspirationPost.VisualStyle.allCases[index % InspirationPost.VisualStyle.allCases.count], rotation: index.isMultiple(of: 2) ? -5 : 5, cornerRadius: 20)
-                        .aspectRatio(1, contentMode: .fit)
+                PhotoTileShell {
+                    ZStack(alignment: .topTrailing) {
+                        ArtworkView(style: InspirationPost.VisualStyle.allCases[index % InspirationPost.VisualStyle.allCases.count], rotation: index.isMultiple(of: 2) ? -5 : 5, cornerRadius: 20)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-                    Button {
-                        onRemove(id)
-                    } label: {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 11, weight: .heavy))
-                            .foregroundStyle(.white)
-                            .frame(width: 26, height: 26)
-                            .background(.black.opacity(0.46), in: Circle())
+                        Button {
+                            onRemove(id)
+                        } label: {
+                            Image(systemName: "xmark")
+                                .font(.system(size: 11, weight: .heavy))
+                                .foregroundStyle(.white)
+                                .frame(width: 26, height: 26)
+                                .background(.black.opacity(0.46), in: Circle())
+                        }
+                        .padding(6)
+                        .accessibilityLabel("删除图片")
                     }
-                    .padding(6)
-                    .accessibilityLabel("删除图片")
                 }
             }
 
             Button(action: onAdd) {
-                VStack(spacing: 7) {
-                    Image(systemName: "plus")
-                        .font(.system(size: 24, weight: .semibold))
-                    Text("添加图片")
-                        .font(.system(size: 12, weight: .heavy))
-                }
-                .foregroundStyle(HuahuoTheme.muted)
-                .frame(maxWidth: .infinity)
-                .aspectRatio(1, contentMode: .fit)
-                .background(.white.opacity(0.58), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 20, style: .continuous)
-                        .stroke(HuahuoTheme.border, style: StrokeStyle(lineWidth: 1, dash: [5, 5]))
+                PhotoTileShell(isDashed: true) {
+                    VStack(spacing: 7) {
+                        Image(systemName: "plus")
+                            .font(.system(size: 24, weight: .semibold))
+                        Text("添加图片")
+                            .font(.system(size: 12, weight: .heavy))
+                    }
+                    .foregroundStyle(HuahuoTheme.muted)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             }
             .buttonStyle(.plain)
             .accessibilityLabel("添加图片")
         }
+    }
+}
+
+private struct PhotoTileShell<Content: View>: View {
+    var isDashed = false
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        content
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(.white.opacity(0.58), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .stroke(
+                        isDashed ? HuahuoTheme.border : .white.opacity(0.72),
+                        style: StrokeStyle(lineWidth: 1, dash: isDashed ? [5, 5] : [])
+                    )
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .frame(maxWidth: .infinity)
+            .aspectRatio(1, contentMode: .fit)
     }
 }
 
