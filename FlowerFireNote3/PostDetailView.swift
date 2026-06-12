@@ -13,9 +13,9 @@ struct PostDetailView: View {
 
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 12) {
-                        ArtworkView(style: post.style, rotation: -5, cornerRadius: 30)
+                        RemoteArtworkView(url: post.detailImageURL ?? post.imageURL, style: post.style, rotation: -5, cornerRadius: 30)
                             .frame(maxWidth: .infinity)
-                            .frame(height: 420)
+                            .aspectRatio(post.imageAspectRatio, contentMode: .fit)
                             .overlay(alignment: .bottom) {
                                 PageDots()
                                     .padding(.bottom, 14)
@@ -54,7 +54,7 @@ private struct DetailTopBar: View {
             .accessibilityLabel("返回首页")
 
             HStack(spacing: 9) {
-                AvatarView(size: 30)
+                AvatarView(imageURL: post.authorAvatarURL, size: 30)
                 Text(post.author)
                     .font(.system(size: 13, weight: .heavy))
                     .foregroundStyle(HuahuoTheme.foreground)
@@ -94,7 +94,7 @@ private struct NoteContentCard: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 12) {
                 HStack(spacing: 10) {
-                    AvatarView(size: 40)
+                    AvatarView(imageURL: post.authorAvatarURL, size: 40)
 
                     VStack(alignment: .leading, spacing: 3) {
                         Text(post.author)
@@ -130,7 +130,7 @@ private struct NoteContentCard: View {
 
             TagFlow(tags: post.tags)
 
-            Text("\(sampleHour(for: post)) 小时前 · 花火记")
+            Text(post.attributionText)
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(HuahuoTheme.muted)
         }
@@ -138,10 +138,6 @@ private struct NoteContentCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .glassCard(cornerRadius: 26)
         .padding(.horizontal, 12)
-    }
-
-    private func sampleHour(for post: InspirationPost) -> Int {
-        (InspirationPost.samples.firstIndex(where: { $0.title == post.title }) ?? 0) + 1
     }
 }
 

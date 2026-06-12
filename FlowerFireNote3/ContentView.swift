@@ -1,12 +1,12 @@
 import SwiftUI
 
 struct ContentView: View {
-    @State private var posts = InspirationPost.samples
+    @StateObject private var feedStore = UnsplashFeedStore()
 
     var body: some View {
         NavigationStack {
             TabView {
-                HomeView(posts: $posts)
+                HomeView(store: feedStore)
                     .tabItem {
                         Label("首页", systemImage: "house")
                     }
@@ -33,8 +33,12 @@ struct ContentView: View {
     }
 
     private func postBinding(_ id: InspirationPost.ID) -> Binding<InspirationPost>? {
-        guard let index = posts.firstIndex(where: { $0.id == id }) else { return nil }
-        return $posts[index]
+        guard feedStore.post(id: id) != nil else { return nil }
+        return Binding {
+            feedStore.post(id: id) ?? InspirationPost.samples[0]
+        } set: { updatedPost in
+            feedStore.update(updatedPost)
+        }
     }
 }
 

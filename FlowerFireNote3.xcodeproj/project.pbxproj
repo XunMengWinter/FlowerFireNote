@@ -19,6 +19,7 @@
 		581A985F2FDC5CA000E3E923 /* index.html in Resources */ = {isa = PBXBuildFile; fileRef = 581A98542FDC5CA000E3E923 /* index.html */; };
 		581A98602FDC5CA000E3E923 /* app.css in Resources */ = {isa = PBXBuildFile; fileRef = 581A98492FDC5CA000E3E923 /* app.css */; };
 		581A98612FDC5CA000E3E923 /* DESIGN-HANDOFF.md in Resources */ = {isa = PBXBuildFile; fileRef = 581A98502FDC5CA000E3E923 /* DESIGN-HANDOFF.md */; };
+		7C0A1D812FDD100000000001 /* NukeUI in Frameworks */ = {isa = PBXBuildFile; productRef = 7C0A1D802FDD100000000001 /* NukeUI */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -55,6 +56,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7C0A1D812FDD100000000001 /* NukeUI in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -134,6 +136,7 @@
 			);
 			name = FlowerFireNote3;
 			packageProductDependencies = (
+				7C0A1D802FDD100000000001 /* NukeUI */,
 			);
 			productName = FlowerFireNote3;
 			productReference = 581A98202FDC5C1A00E3E923 /* FlowerFireNote3.app */;
@@ -163,6 +166,9 @@
 			);
 			mainGroup = 581A98172FDC5C1A00E3E923;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				7C0A1D7F2FDD100000000001 /* XCRemoteSwiftPackageReference "Nuke" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 581A98212FDC5C1A00E3E923 /* Products */;
 			projectDirPath = "";
@@ -432,6 +438,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		7C0A1D7F2FDD100000000001 /* XCRemoteSwiftPackageReference "Nuke" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/kean/Nuke.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 13.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		7C0A1D802FDD100000000001 /* NukeUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7C0A1D7F2FDD100000000001 /* XCRemoteSwiftPackageReference "Nuke" */;
+			productName = NukeUI;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 581A98182FDC5C1A00E3E923 /* Project object */;
 }

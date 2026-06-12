@@ -1,7 +1,8 @@
+import Combine
 import SwiftUI
 
 struct HomeView: View {
-    @Binding var posts: [InspirationPost]
+    @ObservedObject var store: UnsplashFeedStore
     @State private var searchText = ""
     @State private var selectedChannel = "今日灵感"
 
@@ -23,35 +24,96 @@ struct HomeView: View {
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 14) {
                         ChannelStrip(channels: channels, selected: $selectedChannel)
-                        FeedGrid(visiblePosts: filteredPosts, onToggleLike: toggleLike)
+                        feedContent
                     }
                     .padding(.horizontal, 16)
                     .padding(.top, 2)
                     .padding(.bottom, 22)
                 }
-                .border(.green)
+//                .border(.green)
             }
         }
         .navigationBarHidden(true)
-        .onChange(of: selectedChannel) { _, newValue in
-            searchText = newValue == "今日灵感" ? "" : newValue
+        .task(id: queryToken) {
+            let shouldDebounce = store.hasLoadedContent
+            if shouldDebounce {
+                try? await Task.sleep(for: .milliseconds(350))
+            }
+            guard !Task.isCancelled else { return }
+            await store.reload(query: activeQuery)
+        }
+        .onChange(of: selectedChannel) { _, _ in
+            searchText = ""
         }
     }
 
-    private var filteredPosts: [InspirationPost] {
-        let keyword = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !keyword.isEmpty else { return posts }
-
-        return posts.filter { post in
-            let text = "\(post.title) \(post.author) \(post.copy) \(post.tags.joined(separator: " "))"
-            return text.localizedCaseInsensitiveContains(keyword)
+    @ViewBuilder
+    private var feedContent: some View {
+        if store.isLoadingInitial && store.posts.isEmpty {
+            LoadingFeedView()
+        } else if let errorMessage = store.errorMessage, store.posts.isEmpty {
+            ErrorFeedView(message: errorMessage) {
+                Task { await store.retry() }
+            }
+        } else if store.posts.isEmpty {
+            EmptyFeedView()
+        } else {
+            FeedGrid(visiblePosts: store.posts, onToggleLike: store.toggleLike)
+            FeedFooter(
+                isLoading: store.isLoadingPage,
+                canLoadMore: store.canLoadMore,
+                errorMessage: store.errorMessage,
+                onLoadMore: { Task { await store.loadNextPage() } },
+                onRetry: { Task { await store.retry() } }
+            )
         }
     }
 
-    private func toggleLike(_ id: InspirationPost.ID) {
-        guard let index = posts.firstIndex(where: { $0.id == id }) else { return }
-        posts[index].liked.toggle()
-        posts[index].likes += posts[index].liked ? 1 : -1
+    private var queryToken: String {
+        "\(selectedChannel)|\(searchText.trimmingCharacters(in: .whitespacesAndNewlines))"
+    }
+
+    private var activeQuery: String {
+        Self.apiQuery(searchText: searchText, channel: selectedChannel)
+    }
+
+    private static func apiQuery(searchText: String, channel: String) -> String {
+        let trimmed = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmed.isEmpty {
+            return translatedQuery(for: trimmed)
+        }
+
+        switch channel {
+        case "摄影":
+            return "editorial photography soft light"
+        case "插画":
+            return "illustration artwork pastel"
+        case "胶片感":
+            return "film photography grain"
+        case "配色":
+            return "pastel color palette photography"
+        default:
+            return UnsplashConfig.defaultQuery
+        }
+    }
+
+    private static func translatedQuery(for keyword: String) -> String {
+        switch keyword {
+        case let value where value.localizedCaseInsensitiveContains("胶片"):
+            return "film photography grain"
+        case let value where value.localizedCaseInsensitiveContains("插画"):
+            return "illustration artwork pastel"
+        case let value where value.localizedCaseInsensitiveContains("摄影"):
+            return "editorial photography soft light"
+        case let value where value.localizedCaseInsensitiveContains("配色"):
+            return "pastel color palette"
+        case let value where value.localizedCaseInsensitiveContains("窗边"):
+            return "window light photography"
+        case let value where value.localizedCaseInsensitiveContains("拼贴"):
+            return "creative collage art"
+        default:
+            return keyword
+        }
     }
 }
 
@@ -60,19 +122,15 @@ private struct FeedGrid: View {
     var onToggleLike: (InspirationPost.ID) -> Void
 
     var body: some View {
-        if visiblePosts.isEmpty {
-            EmptyFeedView()
-        } else {
-            let columns = balancedColumns(for: visiblePosts)
-            HStack(alignment: .top, spacing: 12) {
-                ForEach(columns.indices, id: \.self) { columnIndex in
-                    LazyVStack(spacing: 12) {
-                        ForEach(Array(columns[columnIndex].enumerated()), id: \.element.id) { itemIndex, post in
-                            NavigationLink(value: post.id) {
-                                PostCard(post: post, rotation: itemIndex.isMultiple(of: 2) ? -5 : 5, onToggleLike: onToggleLike)
-                            }
-                            .buttonStyle(.plain)
+        let columns = balancedColumns(for: visiblePosts)
+        HStack(alignment: .top, spacing: 12) {
+            ForEach(columns.indices, id: \.self) { columnIndex in
+                LazyVStack(spacing: 12) {
+                    ForEach(Array(columns[columnIndex].enumerated()), id: \.element.id) { itemIndex, post in
+                        NavigationLink(value: post.id) {
+                            PostCard(post: post, rotation: itemIndex.isMultiple(of: 2) ? -5 : 5, onToggleLike: onToggleLike)
                         }
+                        .buttonStyle(.plain)
                     }
                 }
             }
@@ -100,8 +158,8 @@ private struct PostCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            ArtworkView(style: post.style, rotation: rotation, cornerRadius: 22)
-                .aspectRatio(post.size.aspectRatio, contentMode: .fit)
+            RemoteArtworkView(url: post.imageURL, style: post.style, rotation: rotation, cornerRadius: 22)
+                .aspectRatio(post.imageAspectRatio, contentMode: .fit)
 
             VStack(alignment: .leading, spacing: 8) {
                 Text(post.title)
@@ -112,7 +170,7 @@ private struct PostCard: View {
 
                 HStack(spacing: 6) {
                     HStack(spacing: 5) {
-                        AvatarView()
+                        AvatarView(imageURL: post.authorAvatarURL)
                         Text(post.author)
                             .lineLimit(1)
                     }
@@ -139,6 +197,105 @@ private struct PostCard: View {
             .padding(10)
         }
         .glassCard(cornerRadius: 22)
+    }
+}
+
+private struct FeedFooter: View {
+    let isLoading: Bool
+    let canLoadMore: Bool
+    let errorMessage: String?
+    var onLoadMore: () -> Void
+    var onRetry: () -> Void
+
+    var body: some View {
+        Group {
+            if isLoading {
+                ProgressView()
+                    .tint(HuahuoTheme.accent)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+            } else if let errorMessage {
+                VStack(spacing: 8) {
+                    Text(errorMessage)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(HuahuoTheme.muted)
+                        .multilineTextAlignment(.center)
+                    Button("重试", action: onRetry)
+                        .font(.system(size: 13, weight: .heavy))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 14)
+                        .frame(height: 34)
+                        .background(HuahuoTheme.accent, in: Capsule())
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+            } else if canLoadMore {
+                Color.clear
+                    .frame(height: 1)
+                    .onAppear(perform: onLoadMore)
+            }
+        }
+    }
+}
+
+private struct LoadingFeedView: View {
+    var body: some View {
+        VStack(spacing: 14) {
+            ProgressView()
+                .tint(HuahuoTheme.accent)
+                .scaleEffect(1.12)
+
+            Text("正在寻找花火灵感")
+                .font(.system(size: 18, weight: .heavy, design: .rounded))
+                .foregroundStyle(HuahuoTheme.foreground)
+
+            Text("从 Unsplash 拉取摄影和插画参考。")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(HuahuoTheme.muted)
+        }
+        .frame(maxWidth: .infinity)
+        .frame(minHeight: 320)
+        .padding(24)
+        .glassCard(cornerRadius: 34)
+    }
+}
+
+private struct ErrorFeedView: View {
+    let message: String
+    var onRetry: () -> Void
+
+    var body: some View {
+        VStack(spacing: 14) {
+            Image(systemName: "wifi.exclamationmark")
+                .font(.system(size: 34, weight: .semibold))
+                .foregroundStyle(HuahuoTheme.accent)
+                .frame(width: 88, height: 88)
+                .background(
+                    LinearGradient(colors: [HuahuoTheme.butter, HuahuoTheme.rose], startPoint: .topLeading, endPoint: .bottomTrailing),
+                    in: RoundedRectangle(cornerRadius: 31, style: .continuous)
+                )
+
+            Text("图片加载失败")
+                .font(.system(size: 24, weight: .heavy, design: .rounded))
+                .foregroundStyle(HuahuoTheme.foreground)
+
+            Text(message)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(HuahuoTheme.muted)
+                .multilineTextAlignment(.center)
+                .lineSpacing(4)
+
+            Button("重试", action: onRetry)
+                .font(.system(size: 15, weight: .heavy))
+                .foregroundStyle(.white)
+                .frame(height: 42)
+                .padding(.horizontal, 22)
+                .background(HuahuoTheme.accent, in: Capsule())
+        }
+        .frame(maxWidth: .infinity)
+        .frame(minHeight: 320)
+        .padding(24)
+        .glassCard(cornerRadius: 34)
     }
 }
 

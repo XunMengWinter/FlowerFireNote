@@ -49,14 +49,69 @@ struct InspirationPost: Identifiable, Hashable {
         }
     }
 
-    let id = UUID()
+    var id: String
     var title: String
     var author: String
     var likes: Int
     var style: VisualStyle
     var size: CardSize
     var copy: String
-    var liked = false
+    var liked: Bool
+    var imageURL: URL?
+    var detailImageURL: URL?
+    var imageWidth: Int?
+    var imageHeight: Int?
+    var photoPageURL: URL?
+    var authorAvatarURL: URL?
+    var sourceName: String
+
+    init(
+        id: String = UUID().uuidString,
+        title: String,
+        author: String,
+        likes: Int,
+        style: VisualStyle,
+        size: CardSize,
+        copy: String,
+        liked: Bool = false,
+        imageURL: URL? = nil,
+        detailImageURL: URL? = nil,
+        imageWidth: Int? = nil,
+        imageHeight: Int? = nil,
+        photoPageURL: URL? = nil,
+        authorAvatarURL: URL? = nil,
+        sourceName: String = "花火记"
+    ) {
+        self.id = id
+        self.title = title
+        self.author = author
+        self.likes = likes
+        self.style = style
+        self.size = size
+        self.copy = copy
+        self.liked = liked
+        self.imageURL = imageURL
+        self.detailImageURL = detailImageURL
+        self.imageWidth = imageWidth
+        self.imageHeight = imageHeight
+        self.photoPageURL = photoPageURL
+        self.authorAvatarURL = authorAvatarURL
+        self.sourceName = sourceName
+    }
+
+    var imageAspectRatio: CGFloat {
+        guard let imageWidth, let imageHeight, imageWidth > 0, imageHeight > 0 else {
+            return size.aspectRatio
+        }
+        return CGFloat(imageWidth) / CGFloat(imageHeight)
+    }
+
+    var attributionText: String {
+        if sourceName == "Unsplash" {
+            return "Photo by \(author) · Unsplash"
+        }
+        return "花火记 · 摄影 / 插画灵感"
+    }
 
     var tags: [String] {
         switch style {
@@ -84,7 +139,13 @@ struct InspirationPost: Identifiable, Hashable {
     }
 
     var heightWeight: Double {
-        size.heightWeight + Double((title.count + 9) / 10) * 0.16
+        let imageWeight: Double
+        if let imageWidth, let imageHeight, imageWidth > 0, imageHeight > 0 {
+            imageWeight = min(max(Double(imageHeight) / Double(imageWidth), 0.72), 1.58)
+        } else {
+            imageWeight = size.heightWeight
+        }
+        return imageWeight + Double((title.count + 9) / 10) * 0.16
     }
 
     static let samples: [InspirationPost] = [

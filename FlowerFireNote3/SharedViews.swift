@@ -1,3 +1,4 @@
+import NukeUI
 import SwiftUI
 
 struct BrandHeader: View {
@@ -110,9 +111,34 @@ struct ChannelStrip: View {
 }
 
 struct AvatarView: View {
+    var imageURL: URL?
     var size: CGFloat = 18
 
     var body: some View {
+        ZStack {
+            avatarPlaceholder
+
+            if let imageURL {
+                LazyImage(url: imageURL) { state in
+                    if let image = state.image {
+                        image
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: size, height: size)
+                    }
+                }
+                .frame(width: size, height: size)
+            }
+        }
+        .clipShape(Circle())
+        .overlay {
+            Circle()
+                .stroke(.white.opacity(0.76), lineWidth: max(1, size / 18))
+        }
+        .frame(width: size, height: size)
+    }
+
+    private var avatarPlaceholder: some View {
         Circle()
             .fill(
                 LinearGradient(
@@ -121,11 +147,41 @@ struct AvatarView: View {
                     endPoint: .bottomTrailing
                 )
             )
-            .overlay {
-                Circle()
-                    .stroke(.white.opacity(0.76), lineWidth: max(1, size / 18))
+    }
+}
+
+struct RemoteArtworkView: View {
+    let url: URL?
+    let style: InspirationPost.VisualStyle
+    var rotation: Double = -5
+    var cornerRadius: CGFloat = 22
+
+    var body: some View {
+        ZStack {
+            ArtworkView(style: style, rotation: rotation, cornerRadius: cornerRadius)
+
+            if let url {
+                LazyImage(url: url) { state in
+                    ZStack {
+                        if let image = state.image {
+                            image
+                                .resizable()
+                                .scaledToFill()
+                        } else if state.error != nil {
+                            Image(systemName: "photo")
+                                .font(.system(size: 24, weight: .semibold))
+                                .foregroundStyle(HuahuoTheme.muted)
+                        } else {
+                            ProgressView()
+                                .tint(HuahuoTheme.accent)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            .frame(width: size, height: size)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
     }
 }
 
