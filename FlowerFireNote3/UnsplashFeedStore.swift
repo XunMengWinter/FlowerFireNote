@@ -32,9 +32,10 @@ struct UnsplashAPIClient {
             throw UnsplashAPIError.invalidURL
         }
 
-        var request = URLRequest(url: url)
+        var request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData)
         request.setValue("Client-ID \(UnsplashConfig.accessKey)", forHTTPHeaderField: "Authorization")
         request.setValue("v1", forHTTPHeaderField: "Accept-Version")
+        request.setValue("no-cache", forHTTPHeaderField: "Cache-Control")
 
         let (data, response) = try await session.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse else {
@@ -43,7 +44,10 @@ struct UnsplashAPIClient {
 
         guard (200..<300).contains(httpResponse.statusCode) else {
             let apiError = try? decoder.decode(UnsplashErrorResponse.self, from: data)
-            throw UnsplashAPIError.requestFailed(statusCode: httpResponse.statusCode, message: apiError?.errors.first)
+            let textError = String(data: data, encoding: .utf8)?
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            let message = apiError?.errors.first ?? (textError?.isEmpty == false ? textError : nil)
+            throw UnsplashAPIError.requestFailed(statusCode: httpResponse.statusCode, message: message)
         }
 
         let payload = try decoder.decode(UnsplashSearchResponse.self, from: data)
@@ -60,9 +64,11 @@ final class UnsplashFeedStore: ObservableObject {
     @Published private(set) var isLoadingInitial = false
     @Published private(set) var isLoadingPage = false
     @Published private(set) var errorMessage: String?
+    @Published private(set) var isRateLimited = false
 
     private let client: UnsplashAPIClient
     private var activeQuery = UnsplashConfig.defaultQuery
+    private var activeQueryToken: String?
     private var page = 0
     private var totalPages = 1
     private var loadedIDs = Set<InspirationPost.ID>()
@@ -76,30 +82,40 @@ final class UnsplashFeedStore: ObservableObject {
     }
 
     var canLoadMore: Bool {
-        page < totalPages && !isLoadingInitial && !isLoadingPage && errorMessage == nil
+        page > 0 && page < totalPages && !isLoadingInitial && !isLoadingPage && !isRateLimited
     }
 
-    func reload(query: String) async {
+    func reloadIfNeeded(query: String, token: String) async {
+        let normalizedQuery = Self.normalizedQuery(query)
+        guard activeQueryToken != token || (!hasLoadedContent && errorMessage == nil) else { return }
+        guard !isLoadingInitial || activeQueryToken != token else { return }
+        await reload(query: normalizedQuery, token: token)
+    }
+
+    private func reload(query: String, token: String?) async {
         let normalizedQuery = Self.normalizedQuery(query)
         activeQuery = normalizedQuery
+        activeQueryToken = token
         page = 0
         totalPages = 1
         posts = []
         loadedIDs = []
         errorMessage = nil
+        isRateLimited = false
         isLoadingInitial = true
         defer { isLoadingInitial = false }
 
         do {
             let searchPage = try await client.searchPhotos(query: normalizedQuery, page: 1)
-            guard activeQuery == normalizedQuery else { return }
+            guard isCurrentReload(query: normalizedQuery, token: token) else { return }
             page = 1
             totalPages = max(searchPage.totalPages, 1)
             appendUniquePosts(searchPage.posts)
         } catch is CancellationError {
             return
         } catch {
-            guard activeQuery == normalizedQuery else { return }
+            guard isCurrentReload(query: normalizedQuery, token: token) else { return }
+            isRateLimited = Self.isRateLimitError(error)
             errorMessage = Self.displayMessage(for: error)
         }
 
@@ -111,19 +127,22 @@ final class UnsplashFeedStore: ObservableObject {
         isLoadingPage = true
         defer { isLoadingPage = false }
         errorMessage = nil
+        isRateLimited = false
         let nextPage = page + 1
         let query = activeQuery
+        let token = activeQueryToken
 
         do {
             let searchPage = try await client.searchPhotos(query: query, page: nextPage)
-            guard activeQuery == query else { return }
+            guard isCurrentReload(query: query, token: token) else { return }
             page = nextPage
             totalPages = max(searchPage.totalPages, 1)
             appendUniquePosts(searchPage.posts)
         } catch is CancellationError {
             return
         } catch {
-            guard activeQuery == query else { return }
+            guard isCurrentReload(query: query, token: token) else { return }
+            isRateLimited = Self.isRateLimitError(error)
             errorMessage = Self.displayMessage(for: error)
         }
 
@@ -131,7 +150,7 @@ final class UnsplashFeedStore: ObservableObject {
 
     func retry() async {
         if posts.isEmpty {
-            await reload(query: activeQuery)
+            await reload(query: activeQuery, token: activeQueryToken)
         } else {
             await loadNextPage()
         }
@@ -159,6 +178,10 @@ final class UnsplashFeedStore: ObservableObject {
         }
     }
 
+    private func isCurrentReload(query: String, token: String?) -> Bool {
+        activeQuery == query && activeQueryToken == token
+    }
+
     private static func normalizedQuery(_ query: String) -> String {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? UnsplashConfig.defaultQuery : trimmed
@@ -166,9 +189,16 @@ final class UnsplashFeedStore: ObservableObject {
 
     private static func displayMessage(for error: Error) -> String {
         if let apiError = error as? UnsplashAPIError {
+            if apiError.isRateLimitExceeded {
+                return "Unsplash 当前额度已用完，请稍后再试。"
+            }
             return apiError.localizedDescription
         }
         return "图片加载失败，请稍后重试。"
+    }
+
+    private static func isRateLimitError(_ error: Error) -> Bool {
+        (error as? UnsplashAPIError)?.isRateLimitExceeded == true
     }
 }
 
@@ -181,6 +211,13 @@ private enum UnsplashAPIError: LocalizedError {
     case invalidURL
     case invalidResponse
     case requestFailed(statusCode: Int, message: String?)
+
+    var isRateLimitExceeded: Bool {
+        if case .requestFailed(403, let message) = self {
+            return message?.localizedCaseInsensitiveContains("rate limit") == true
+        }
+        return false
+    }
 
     var errorDescription: String? {
         switch self {

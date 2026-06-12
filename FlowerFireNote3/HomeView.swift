@@ -3,7 +3,9 @@ import SwiftUI
 
 struct HomeView: View {
     @ObservedObject var store: UnsplashFeedStore
-    @State private var searchText = ""
+    @State private var searchDraftText = ""
+    @State private var submittedSearchText = ""
+    @State private var searchSubmissionID = 0
     @State private var selectedChannel = "今日灵感"
 
     private let channels = ["今日灵感", "摄影", "插画", "胶片感", "配色"]
@@ -15,7 +17,7 @@ struct HomeView: View {
             VStack(spacing: 0) {
                 VStack(spacing: 14) {
                     BrandHeader()
-                    SearchField(text: $searchText)
+                    SearchField(text: $searchDraftText, onSubmit: submitSearch)
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 12)
@@ -40,10 +42,11 @@ struct HomeView: View {
                 try? await Task.sleep(for: .milliseconds(350))
             }
             guard !Task.isCancelled else { return }
-            await store.reload(query: activeQuery)
+            await store.reloadIfNeeded(query: activeQuery, token: queryToken)
         }
         .onChange(of: selectedChannel) { _, _ in
-            searchText = ""
+            searchDraftText = ""
+            submittedSearchText = ""
         }
     }
 
@@ -52,7 +55,7 @@ struct HomeView: View {
         if store.isLoadingInitial && store.posts.isEmpty {
             LoadingFeedView()
         } else if let errorMessage = store.errorMessage, store.posts.isEmpty {
-            ErrorFeedView(message: errorMessage) {
+            ErrorFeedView(message: errorMessage, isRateLimited: store.isRateLimited) {
                 Task { await store.retry() }
             }
         } else if store.posts.isEmpty {
@@ -63,6 +66,7 @@ struct HomeView: View {
                 isLoading: store.isLoadingPage,
                 canLoadMore: store.canLoadMore,
                 errorMessage: store.errorMessage,
+                isRateLimited: store.isRateLimited,
                 onLoadMore: { Task { await store.loadNextPage() } },
                 onRetry: { Task { await store.retry() } }
             )
@@ -70,11 +74,16 @@ struct HomeView: View {
     }
 
     private var queryToken: String {
-        "\(selectedChannel)|\(searchText.trimmingCharacters(in: .whitespacesAndNewlines))"
+        "\(selectedChannel)|\(submittedSearchText)|\(searchSubmissionID)"
     }
 
     private var activeQuery: String {
-        Self.apiQuery(searchText: searchText, channel: selectedChannel)
+        Self.apiQuery(searchText: submittedSearchText, channel: selectedChannel)
+    }
+
+    private func submitSearch() {
+        submittedSearchText = searchDraftText.trimmingCharacters(in: .whitespacesAndNewlines)
+        searchSubmissionID += 1
     }
 
     private static func apiQuery(searchText: String, channel: String) -> String {
@@ -165,7 +174,7 @@ private struct PostCard: View {
                 Text(post.title)
                     .font(.system(size: 14, weight: .heavy, design: .rounded))
                     .foregroundStyle(HuahuoTheme.foreground)
-                    .lineLimit(3)
+                    .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
 
                 HStack(spacing: 6) {
@@ -204,6 +213,7 @@ private struct FeedFooter: View {
     let isLoading: Bool
     let canLoadMore: Bool
     let errorMessage: String?
+    let isRateLimited: Bool
     var onLoadMore: () -> Void
     var onRetry: () -> Void
 
@@ -220,12 +230,18 @@ private struct FeedFooter: View {
                         .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(HuahuoTheme.muted)
                         .multilineTextAlignment(.center)
-                    Button("重试", action: onRetry)
-                        .font(.system(size: 13, weight: .heavy))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 14)
-                        .frame(height: 34)
-                        .background(HuahuoTheme.accent, in: Capsule())
+                    if isRateLimited {
+                        Text("额度恢复后再搜索")
+                            .font(.system(size: 12, weight: .heavy))
+                            .foregroundStyle(HuahuoTheme.accent)
+                    } else {
+                        Button("重试", action: onRetry)
+                            .font(.system(size: 13, weight: .heavy))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 14)
+                            .frame(height: 34)
+                            .background(HuahuoTheme.accent, in: Capsule())
+                    }
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 14)
@@ -262,6 +278,7 @@ private struct LoadingFeedView: View {
 
 private struct ErrorFeedView: View {
     let message: String
+    let isRateLimited: Bool
     var onRetry: () -> Void
 
     var body: some View {
@@ -275,7 +292,7 @@ private struct ErrorFeedView: View {
                     in: RoundedRectangle(cornerRadius: 31, style: .continuous)
                 )
 
-            Text("图片加载失败")
+            Text(isRateLimited ? "Unsplash 额度已用完" : "图片加载失败")
                 .font(.system(size: 24, weight: .heavy, design: .rounded))
                 .foregroundStyle(HuahuoTheme.foreground)
 
@@ -285,12 +302,14 @@ private struct ErrorFeedView: View {
                 .multilineTextAlignment(.center)
                 .lineSpacing(4)
 
-            Button("重试", action: onRetry)
-                .font(.system(size: 15, weight: .heavy))
-                .foregroundStyle(.white)
-                .frame(height: 42)
-                .padding(.horizontal, 22)
-                .background(HuahuoTheme.accent, in: Capsule())
+            if !isRateLimited {
+                Button("重试", action: onRetry)
+                    .font(.system(size: 15, weight: .heavy))
+                    .foregroundStyle(.white)
+                    .frame(height: 42)
+                    .padding(.horizontal, 22)
+                    .background(HuahuoTheme.accent, in: Capsule())
+            }
         }
         .frame(maxWidth: .infinity)
         .frame(minHeight: 320)

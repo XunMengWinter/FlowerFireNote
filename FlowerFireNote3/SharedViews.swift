@@ -53,6 +53,7 @@ struct SparkMark: View {
 
 struct SearchField: View {
     @Binding var text: String
+    var onSubmit: () -> Void = {}
 
     var body: some View {
         HStack(spacing: 9) {
@@ -63,6 +64,8 @@ struct SearchField: View {
             TextField("搜索胶片、窗边光、拼贴...", text: $text)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
+                .submitLabel(.search)
+                .onSubmit(onSubmit)
                 .font(.system(size: 14, weight: .medium))
                 .foregroundStyle(HuahuoTheme.foreground)
 
