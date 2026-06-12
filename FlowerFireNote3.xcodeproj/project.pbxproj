@@ -43,6 +43,11 @@
 			path = FlowerFireNote3;
 			sourceTree = "<group>";
 		};
+		581A98752FDC69EE00E3E923 /* logs */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = logs;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -59,6 +64,7 @@
 		581A98172FDC5C1A00E3E923 = {
 			isa = PBXGroup;
 			children = (
+				581A98752FDC69EE00E3E923 /* logs */,
 				581A98562FDC5CA000E3E923 /* OpenDesignFFN */,
 				581A98472FDC5C3400E3E923 /* AGENTS.md */,
 				581A98222FDC5C1A00E3E923 /* FlowerFireNote3 */,

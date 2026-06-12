@@ -8,25 +8,27 @@ struct PostDetailView: View {
         ZStack(alignment: .bottom) {
             Color.clear.huahuoBackground()
 
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: 12) {
-                    DetailTopBar(post: post, onBack: { dismiss() })
+            VStack(spacing: 0) {
+                DetailTopBar(post: post, onBack: { dismiss() })
 
-                    ArtworkView(style: post.style, rotation: -5, cornerRadius: 30)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 420)
-                        .overlay(alignment: .bottom) {
-                            PageDots()
-                                .padding(.bottom, 14)
-                        }
-                        .padding(.horizontal, 14)
-                        .shadow(color: HuahuoTheme.shadow, radius: 22, y: 12)
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 12) {
+                        ArtworkView(style: post.style, rotation: -5, cornerRadius: 30)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 420)
+                            .overlay(alignment: .bottom) {
+                                PageDots()
+                                    .padding(.bottom, 14)
+                            }
+                            .padding(.horizontal, 14)
+                            .shadow(color: HuahuoTheme.shadow, radius: 22, y: 12)
 
-                    NoteContentCard(post: post)
-                    CommentCard(comments: post.comments)
+                        NoteContentCard(post: post)
+                        CommentCard(comments: post.comments)
+                    }
+                    .padding(.top, 6)
+                    .padding(.bottom, 112)
                 }
-                .padding(.top, 6)
-                .padding(.bottom, 112)
             }
 
             DetailActionBar(post: $post)

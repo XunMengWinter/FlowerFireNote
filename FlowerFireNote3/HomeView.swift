@@ -11,16 +11,25 @@ struct HomeView: View {
         ZStack {
             Color.clear.huahuoBackground()
 
-            ScrollView(showsIndicators: false) {
+            VStack(spacing: 0) {
                 VStack(spacing: 14) {
                     BrandHeader()
                     SearchField(text: $searchText)
-                    ChannelStrip(channels: channels, selected: $selectedChannel)
-                    FeedGrid(visiblePosts: filteredPosts, allPosts: $posts, onToggleLike: toggleLike)
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 12)
-                .padding(.bottom, 22)
+                .padding(.bottom, 10)
+
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 14) {
+                        ChannelStrip(channels: channels, selected: $selectedChannel)
+                        FeedGrid(visiblePosts: filteredPosts, onToggleLike: toggleLike)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 2)
+                    .padding(.bottom, 22)
+                }
+                .border(.green)
             }
         }
         .navigationBarHidden(true)
@@ -48,7 +57,6 @@ struct HomeView: View {
 
 private struct FeedGrid: View {
     let visiblePosts: [InspirationPost]
-    @Binding var allPosts: [InspirationPost]
     var onToggleLike: (InspirationPost.ID) -> Void
 
     var body: some View {
@@ -68,13 +76,6 @@ private struct FeedGrid: View {
                     }
                 }
             }
-            .navigationDestination(for: InspirationPost.ID.self) { id in
-                if let post = postBinding(id) {
-                    PostDetailView(post: post)
-                } else {
-                    MissingPostView()
-                }
-            }
         }
     }
 
@@ -89,11 +90,6 @@ private struct FeedGrid: View {
         }
 
         return columns
-    }
-
-    private func postBinding(_ id: InspirationPost.ID) -> Binding<InspirationPost>? {
-        guard let index = allPosts.firstIndex(where: { $0.id == id }) else { return nil }
-        return $allPosts[index]
     }
 }
 
@@ -172,14 +168,5 @@ private struct EmptyFeedView: View {
         .frame(minHeight: 320)
         .padding(24)
         .glassCard(cornerRadius: 34)
-    }
-}
-
-private struct MissingPostView: View {
-    var body: some View {
-        Text("这条灵感暂时不可用")
-            .foregroundStyle(HuahuoTheme.muted)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .huahuoBackground()
     }
 }
