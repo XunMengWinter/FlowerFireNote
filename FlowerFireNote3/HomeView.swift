@@ -3,6 +3,8 @@ import SwiftUI
 
 struct HomeView: View {
     @ObservedObject var store: UnsplashFeedStore
+    let favoriteIDs: Set<InspirationPost.ID>
+    var onToggleFavorite: (InspirationPost) -> Void
     @State private var searchDraftText = ""
     @State private var submittedSearchText = ""
     @State private var searchSubmissionID = 0
@@ -61,7 +63,7 @@ struct HomeView: View {
         } else if store.posts.isEmpty {
             EmptyFeedView()
         } else {
-            FeedGrid(visiblePosts: store.posts, onToggleLike: store.toggleLike)
+            FeedGrid(visiblePosts: store.posts, favoriteIDs: favoriteIDs, onToggleFavorite: onToggleFavorite)
             FeedFooter(
                 isLoading: store.isLoadingPage,
                 canLoadMore: store.canLoadMore,
@@ -128,7 +130,8 @@ struct HomeView: View {
 
 private struct FeedGrid: View {
     let visiblePosts: [InspirationPost]
-    var onToggleLike: (InspirationPost.ID) -> Void
+    let favoriteIDs: Set<InspirationPost.ID>
+    var onToggleFavorite: (InspirationPost) -> Void
 
     var body: some View {
         let columns = balancedColumns(for: visiblePosts)
@@ -136,8 +139,13 @@ private struct FeedGrid: View {
             ForEach(columns.indices, id: \.self) { columnIndex in
                 LazyVStack(spacing: 12) {
                     ForEach(Array(columns[columnIndex].enumerated()), id: \.element.id) { itemIndex, post in
-                        NavigationLink(value: post.id) {
-                            PostCard(post: post, rotation: itemIndex.isMultiple(of: 2) ? -5 : 5, onToggleLike: onToggleLike)
+                        NavigationLink(value: post) {
+                            PostCard(
+                                post: post,
+                                isFavorite: favoriteIDs.contains(post.id),
+                                rotation: itemIndex.isMultiple(of: 2) ? -5 : 5,
+                                onToggleFavorite: onToggleFavorite
+                            )
                         }
                         .buttonStyle(.plain)
                     }
@@ -162,8 +170,9 @@ private struct FeedGrid: View {
 
 private struct PostCard: View {
     let post: InspirationPost
+    let isFavorite: Bool
     var rotation: Double
-    var onToggleLike: (InspirationPost.ID) -> Void
+    var onToggleFavorite: (InspirationPost) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -189,18 +198,18 @@ private struct PostCard: View {
                     Spacer(minLength: 4)
 
                     Button {
-                        onToggleLike(post.id)
+                        onToggleFavorite(post)
                     } label: {
                         HStack(spacing: 3) {
-                            Image(systemName: post.liked ? "heart.fill" : "heart")
+                            Image(systemName: isFavorite ? "heart.fill" : "heart")
                                 .font(.system(size: 12, weight: .semibold))
                             Text("\(post.likes)")
                                 .font(.system(size: 11, weight: .semibold))
                         }
-                        .foregroundStyle(post.liked ? HuahuoTheme.accent : HuahuoTheme.muted)
+                        .foregroundStyle(isFavorite ? HuahuoTheme.accent : HuahuoTheme.muted)
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel(post.liked ? "取消喜欢 \(post.title)" : "喜欢 \(post.title)")
+                    .accessibilityLabel(isFavorite ? "取消收藏 \(post.title)" : "收藏 \(post.title)")
                 }
             }
             .padding(10)

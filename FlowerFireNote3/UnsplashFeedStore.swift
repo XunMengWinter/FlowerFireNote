@@ -156,19 +156,8 @@ final class UnsplashFeedStore: ObservableObject {
         }
     }
 
-    func toggleLike(_ id: InspirationPost.ID) {
-        guard let index = posts.firstIndex(where: { $0.id == id }) else { return }
-        posts[index].liked.toggle()
-        posts[index].likes += posts[index].liked ? 1 : -1
-    }
-
     func post(id: InspirationPost.ID) -> InspirationPost? {
         posts.first { $0.id == id }
-    }
-
-    func update(_ post: InspirationPost) {
-        guard let index = posts.firstIndex(where: { $0.id == post.id }) else { return }
-        posts[index] = post
     }
 
     private func appendUniquePosts(_ newPosts: [InspirationPost]) {

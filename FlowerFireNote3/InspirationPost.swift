@@ -27,7 +27,7 @@ struct InspirationPost: Identifiable, Hashable {
         }
     }
 
-    enum CardSize: Hashable {
+    enum CardSize: String, Hashable {
         case short
         case medium
         case tall

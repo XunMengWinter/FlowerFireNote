@@ -1,7 +1,9 @@
 import SwiftUI
 
 struct PostDetailView: View {
-    @Binding var post: InspirationPost
+    let post: InspirationPost
+    let isFavorite: Bool
+    var onToggleFavorite: (InspirationPost) -> Void
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -31,7 +33,7 @@ struct PostDetailView: View {
                 }
             }
 
-            DetailActionBar(post: $post)
+            DetailActionBar(post: post, isFavorite: isFavorite, onToggleFavorite: onToggleFavorite)
         }
         .navigationBarBackButtonHidden(true)
         .toolbar(.hidden, for: .navigationBar)
@@ -182,7 +184,9 @@ private struct CommentCard: View {
 }
 
 private struct DetailActionBar: View {
-    @Binding var post: InspirationPost
+    let post: InspirationPost
+    let isFavorite: Bool
+    var onToggleFavorite: (InspirationPost) -> Void
 
     var body: some View {
         HStack(spacing: 10) {
@@ -202,10 +206,10 @@ private struct DetailActionBar: View {
             .buttonStyle(.plain)
 
             HStack(spacing: 4) {
-                ActionButton(systemImage: post.liked ? "heart.fill" : "heart", text: "\(post.likes)", highlighted: post.liked) {
-                    post.liked.toggle()
-                    post.likes += post.liked ? 1 : -1
+                ActionButton(systemImage: isFavorite ? "heart.fill" : "heart", text: "\(post.likes)", highlighted: isFavorite) {
+                    onToggleFavorite(post)
                 }
+                .accessibilityLabel(isFavorite ? "取消收藏 \(post.title)" : "收藏 \(post.title)")
 
                 ActionButton(systemImage: "bubble.right", text: "\(post.comments.count)") {
                 }

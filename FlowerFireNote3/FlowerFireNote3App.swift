@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import SwiftData
 
 @main
 struct FlowerFireNote3App: App {
@@ -13,5 +14,6 @@ struct FlowerFireNote3App: App {
         WindowGroup {
             ContentView()
         }
+        .modelContainer(for: FavoritePost.self)
     }
 }
