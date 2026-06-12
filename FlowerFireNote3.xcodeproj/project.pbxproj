@@ -6,8 +6,35 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		581A98482FDC5C3400E3E923 /* AGENTS.md in Resources */ = {isa = PBXBuildFile; fileRef = 581A98472FDC5C3400E3E923 /* AGENTS.md */; };
+		581A98572FDC5CA000E3E923 /* posts.js in Resources */ = {isa = PBXBuildFile; fileRef = 581A984D2FDC5CA000E3E923 /* posts.js */; };
+		581A98582FDC5CA000E3E923 /* detail.js in Resources */ = {isa = PBXBuildFile; fileRef = 581A984B2FDC5CA000E3E923 /* detail.js */; };
+		581A98592FDC5CA000E3E923 /* DESIGN-MANIFEST.json in Resources */ = {isa = PBXBuildFile; fileRef = 581A98512FDC5CA000E3E923 /* DESIGN-MANIFEST.json */; };
+		581A985A2FDC5CA000E3E923 /* huahuoji-ios-home.html in Resources */ = {isa = PBXBuildFile; fileRef = 581A98532FDC5CA000E3E923 /* huahuoji-ios-home.html */; };
+		581A985B2FDC5CA000E3E923 /* home.js in Resources */ = {isa = PBXBuildFile; fileRef = 581A984C2FDC5CA000E3E923 /* home.js */; };
+		581A985C2FDC5CA000E3E923 /* publish.js in Resources */ = {isa = PBXBuildFile; fileRef = 581A984E2FDC5CA000E3E923 /* publish.js */; };
+		581A985D2FDC5CA000E3E923 /* publish.html in Resources */ = {isa = PBXBuildFile; fileRef = 581A98552FDC5CA000E3E923 /* publish.html */; };
+		581A985E2FDC5CA000E3E923 /* detail.html in Resources */ = {isa = PBXBuildFile; fileRef = 581A98522FDC5CA000E3E923 /* detail.html */; };
+		581A985F2FDC5CA000E3E923 /* index.html in Resources */ = {isa = PBXBuildFile; fileRef = 581A98542FDC5CA000E3E923 /* index.html */; };
+		581A98602FDC5CA000E3E923 /* app.css in Resources */ = {isa = PBXBuildFile; fileRef = 581A98492FDC5CA000E3E923 /* app.css */; };
+		581A98612FDC5CA000E3E923 /* DESIGN-HANDOFF.md in Resources */ = {isa = PBXBuildFile; fileRef = 581A98502FDC5CA000E3E923 /* DESIGN-HANDOFF.md */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		581A98202FDC5C1A00E3E923 /* FlowerFireNote3.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FlowerFireNote3.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		581A98472FDC5C3400E3E923 /* AGENTS.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = AGENTS.md; sourceTree = "<group>"; };
+		581A98492FDC5CA000E3E923 /* app.css */ = {isa = PBXFileReference; lastKnownFileType = text.css; path = app.css; sourceTree = "<group>"; };
+		581A984B2FDC5CA000E3E923 /* detail.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = detail.js; sourceTree = "<group>"; };
+		581A984C2FDC5CA000E3E923 /* home.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = home.js; sourceTree = "<group>"; };
+		581A984D2FDC5CA000E3E923 /* posts.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = posts.js; sourceTree = "<group>"; };
+		581A984E2FDC5CA000E3E923 /* publish.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = publish.js; sourceTree = "<group>"; };
+		581A98502FDC5CA000E3E923 /* DESIGN-HANDOFF.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = "DESIGN-HANDOFF.md"; sourceTree = "<group>"; };
+		581A98512FDC5CA000E3E923 /* DESIGN-MANIFEST.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "DESIGN-MANIFEST.json"; sourceTree = "<group>"; };
+		581A98522FDC5CA000E3E923 /* detail.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = detail.html; sourceTree = "<group>"; };
+		581A98532FDC5CA000E3E923 /* huahuoji-ios-home.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = "huahuoji-ios-home.html"; sourceTree = "<group>"; };
+		581A98542FDC5CA000E3E923 /* index.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = index.html; sourceTree = "<group>"; };
+		581A98552FDC5CA000E3E923 /* publish.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = publish.html; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -32,6 +59,8 @@
 		581A98172FDC5C1A00E3E923 = {
 			isa = PBXGroup;
 			children = (
+				581A98562FDC5CA000E3E923 /* OpenDesignFFN */,
+				581A98472FDC5C3400E3E923 /* AGENTS.md */,
 				581A98222FDC5C1A00E3E923 /* FlowerFireNote3 */,
 				581A98212FDC5C1A00E3E923 /* Products */,
 			);
@@ -43,6 +72,40 @@
 				581A98202FDC5C1A00E3E923 /* FlowerFireNote3.app */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		581A984A2FDC5CA000E3E923 /* css */ = {
+			isa = PBXGroup;
+			children = (
+				581A98492FDC5CA000E3E923 /* app.css */,
+			);
+			path = css;
+			sourceTree = "<group>";
+		};
+		581A984F2FDC5CA000E3E923 /* js */ = {
+			isa = PBXGroup;
+			children = (
+				581A984B2FDC5CA000E3E923 /* detail.js */,
+				581A984C2FDC5CA000E3E923 /* home.js */,
+				581A984D2FDC5CA000E3E923 /* posts.js */,
+				581A984E2FDC5CA000E3E923 /* publish.js */,
+			);
+			path = js;
+			sourceTree = "<group>";
+		};
+		581A98562FDC5CA000E3E923 /* OpenDesignFFN */ = {
+			isa = PBXGroup;
+			children = (
+				581A984A2FDC5CA000E3E923 /* css */,
+				581A984F2FDC5CA000E3E923 /* js */,
+				581A98502FDC5CA000E3E923 /* DESIGN-HANDOFF.md */,
+				581A98512FDC5CA000E3E923 /* DESIGN-MANIFEST.json */,
+				581A98522FDC5CA000E3E923 /* detail.html */,
+				581A98532FDC5CA000E3E923 /* huahuoji-ios-home.html */,
+				581A98542FDC5CA000E3E923 /* index.html */,
+				581A98552FDC5CA000E3E923 /* publish.html */,
+			);
+			path = OpenDesignFFN;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -109,6 +172,18 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				581A98482FDC5C3400E3E923 /* AGENTS.md in Resources */,
+				581A98572FDC5CA000E3E923 /* posts.js in Resources */,
+				581A98582FDC5CA000E3E923 /* detail.js in Resources */,
+				581A98592FDC5CA000E3E923 /* DESIGN-MANIFEST.json in Resources */,
+				581A985A2FDC5CA000E3E923 /* huahuoji-ios-home.html in Resources */,
+				581A985B2FDC5CA000E3E923 /* home.js in Resources */,
+				581A985C2FDC5CA000E3E923 /* publish.js in Resources */,
+				581A985D2FDC5CA000E3E923 /* publish.html in Resources */,
+				581A985E2FDC5CA000E3E923 /* detail.html in Resources */,
+				581A985F2FDC5CA000E3E923 /* index.html in Resources */,
+				581A98602FDC5CA000E3E923 /* app.css in Resources */,
+				581A98612FDC5CA000E3E923 /* DESIGN-HANDOFF.md in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -1,21 +1,32 @@
-//
-//  ContentView.swift
-//  FlowerFireNote3
-//
-//  Created by ice on 12/6/26.
-//
-
 import SwiftUI
 
 struct ContentView: View {
+    @State private var posts = InspirationPost.samples
+
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        TabView {
+            NavigationStack {
+                HomeView(posts: $posts)
+            }
+            .tabItem {
+                Label("首页", systemImage: "house")
+            }
+
+            NavigationStack {
+                PublishView()
+            }
+            .tabItem {
+                Label("发布", systemImage: "plus.square")
+            }
+
+            NavigationStack {
+                ProfileView()
+            }
+            .tabItem {
+                Label("我的", systemImage: "person")
+            }
         }
-        .padding()
+        .tint(HuahuoTheme.accent)
     }
 }
 
