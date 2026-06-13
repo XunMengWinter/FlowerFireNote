@@ -63,7 +63,7 @@ struct HomeView: View {
         } else if store.posts.isEmpty {
             EmptyFeedView()
         } else {
-            FeedGrid(visiblePosts: store.posts, favoriteIDs: favoriteIDs, onToggleFavorite: onToggleFavorite)
+            FeedGrid(postColumns: store.postColumns, favoriteIDs: favoriteIDs, onToggleFavorite: onToggleFavorite)
             FeedFooter(
                 isLoading: store.isLoadingPage,
                 canLoadMore: store.canLoadMore,
@@ -129,50 +129,49 @@ struct HomeView: View {
 }
 
 private struct FeedGrid: View {
-    let visiblePosts: [InspirationPost]
+    let postColumns: [[InspirationPost]]
     let favoriteIDs: Set<InspirationPost.ID>
     var onToggleFavorite: (InspirationPost) -> Void
 
     var body: some View {
-        let columns = balancedColumns(for: visiblePosts)
         HStack(alignment: .top, spacing: 12) {
-            ForEach(columns.indices, id: \.self) { columnIndex in
+            ForEach(postColumns.indices, id: \.self) { columnIndex in
                 LazyVStack(spacing: 12) {
-                    ForEach(Array(columns[columnIndex].enumerated()), id: \.element.id) { itemIndex, post in
+                    ForEach(postColumns[columnIndex]) { post in
                         NavigationLink(value: post) {
                             PostCard(
                                 post: post,
                                 isFavorite: favoriteIDs.contains(post.id),
-                                rotation: itemIndex.isMultiple(of: 2) ? -5 : 5,
+                                rotation: Self.cardRotation(for: post.id),
                                 onToggleFavorite: onToggleFavorite
                             )
+                            .equatable()
                         }
                         .buttonStyle(.plain)
                     }
                 }
+                .frame(maxWidth: .infinity, alignment: .top)
             }
         }
     }
 
-    private func balancedColumns(for posts: [InspirationPost]) -> [[InspirationPost]] {
-        var columns = Array(repeating: [InspirationPost](), count: 2)
-        var heights = Array(repeating: 0.0, count: 2)
-
-        for post in posts {
-            let target = heights[0] <= heights[1] ? 0 : 1
-            columns[target].append(post)
-            heights[target] += post.heightWeight
-        }
-
-        return columns
+    private static func cardRotation(for id: InspirationPost.ID) -> Double {
+        let seed = id.unicodeScalars.reduce(0) { $0 + Int($1.value) }
+        return seed.isMultiple(of: 2) ? -5 : 5
     }
 }
 
-private struct PostCard: View {
+private struct PostCard: View, Equatable {
     let post: InspirationPost
     let isFavorite: Bool
     var rotation: Double
     var onToggleFavorite: (InspirationPost) -> Void
+
+    static func == (lhs: PostCard, rhs: PostCard) -> Bool {
+        lhs.post == rhs.post &&
+            lhs.isFavorite == rhs.isFavorite &&
+            lhs.rotation == rhs.rotation
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -214,7 +213,7 @@ private struct PostCard: View {
             }
             .padding(10)
         }
-        .glassCard(cornerRadius: 22)
+        .glassCard(cornerRadius: 22, shadow: false)
     }
 }
 

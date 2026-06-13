@@ -61,10 +61,13 @@ struct UnsplashAPIClient {
 @MainActor
 final class UnsplashFeedStore: ObservableObject {
     @Published private(set) var posts: [InspirationPost] = []
+    @Published private(set) var postColumns: [[InspirationPost]] = UnsplashFeedStore.emptyPostColumns()
     @Published private(set) var isLoadingInitial = false
     @Published private(set) var isLoadingPage = false
     @Published private(set) var errorMessage: String?
     @Published private(set) var isRateLimited = false
+
+    private static let feedColumnCount = 2
 
     private let client: UnsplashAPIClient
     private var activeQuery = UnsplashConfig.defaultQuery
@@ -72,6 +75,7 @@ final class UnsplashFeedStore: ObservableObject {
     private var page = 0
     private var totalPages = 1
     private var loadedIDs = Set<InspirationPost.ID>()
+    private var columnHeights = UnsplashFeedStore.emptyColumnHeights()
 
     init(client: UnsplashAPIClient = UnsplashAPIClient()) {
         self.client = client
@@ -98,8 +102,7 @@ final class UnsplashFeedStore: ObservableObject {
         activeQueryToken = token
         page = 0
         totalPages = 1
-        posts = []
-        loadedIDs = []
+        resetLoadedPosts()
         errorMessage = nil
         isRateLimited = false
         isLoadingInitial = true
@@ -161,10 +164,40 @@ final class UnsplashFeedStore: ObservableObject {
     }
 
     private func appendUniquePosts(_ newPosts: [InspirationPost]) {
+        var uniquePosts: [InspirationPost] = []
         for post in newPosts where !loadedIDs.contains(post.id) {
-            posts.append(post)
+            uniquePosts.append(post)
             loadedIDs.insert(post.id)
         }
+
+        guard !uniquePosts.isEmpty else { return }
+
+        posts.append(contentsOf: uniquePosts)
+
+        var nextColumns = postColumns
+        var nextHeights = columnHeights
+        for post in uniquePosts {
+            let target = nextHeights[0] <= nextHeights[1] ? 0 : 1
+            nextColumns[target].append(post)
+            nextHeights[target] += post.heightWeight
+        }
+        postColumns = nextColumns
+        columnHeights = nextHeights
+    }
+
+    private func resetLoadedPosts() {
+        posts = []
+        postColumns = Self.emptyPostColumns()
+        loadedIDs = []
+        columnHeights = Self.emptyColumnHeights()
+    }
+
+    private static func emptyPostColumns() -> [[InspirationPost]] {
+        Array(repeating: [], count: feedColumnCount)
+    }
+
+    private static func emptyColumnHeights() -> [Double] {
+        Array(repeating: 0, count: feedColumnCount)
     }
 
     private func isCurrentReload(query: String, token: String?) -> Bool {

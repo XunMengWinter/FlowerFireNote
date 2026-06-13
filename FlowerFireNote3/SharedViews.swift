@@ -160,31 +160,45 @@ struct RemoteArtworkView: View {
     var cornerRadius: CGFloat = 22
 
     var body: some View {
-        ZStack {
-            ArtworkView(style: style, rotation: rotation, cornerRadius: cornerRadius)
-
+        Group {
             if let url {
                 LazyImage(url: url) { state in
-                    ZStack {
-                        if let image = state.image {
-                            image
-                                .resizable()
-                                .scaledToFill()
-                        } else if state.error != nil {
-                            Image(systemName: "photo")
-                                .font(.system(size: 24, weight: .semibold))
-                                .foregroundStyle(HuahuoTheme.muted)
-                        } else {
-                            ProgressView()
-                                .tint(HuahuoTheme.accent)
-                        }
+                    if let image = state.image {
+                        image
+                            .resizable()
+                            .scaledToFill()
+                    } else {
+                        ArtworkPlaceholderView(style: style, showsError: state.error != nil)
                     }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .transaction { transaction in
+                    transaction.animation = nil
+                }
+            } else {
+                ArtworkPlaceholderView(style: style, showsError: false)
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+    }
+}
+
+struct ArtworkPlaceholderView: View {
+    let style: InspirationPost.VisualStyle
+    var showsError: Bool
+
+    var body: some View {
+        LinearGradient(
+            colors: style.gradientColors,
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+        .overlay {
+            Image(systemName: showsError ? "photo" : "sparkles")
+                .font(.system(size: 23, weight: .semibold))
+                .foregroundStyle(.white.opacity(showsError ? 0.78 : 0.52))
+        }
     }
 }
 
