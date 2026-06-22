@@ -9,6 +9,9 @@ struct HomeView: View {
     @State private var submittedSearchText = ""
     @State private var searchSubmissionID = 0
     @State private var selectedChannel = "今日灵感"
+    @State private var userScrolledSinceLastPageLoad = false
+    @State private var visibleAutoLoadTriggerID: InspirationPost.ID?
+    @State private var lastAutoLoadTriggerID: InspirationPost.ID?
 
     private let channels = ["今日灵感", "摄影", "插画", "胶片感", "配色"]
 
@@ -26,7 +29,7 @@ struct HomeView: View {
                 .padding(.bottom, 10)
 
                 ScrollView(showsIndicators: false) {
-                    VStack(spacing: 14) {
+                    LazyVStack(spacing: 14) {
                         ChannelStrip(channels: channels, selected: $selectedChannel)
                         feedContent
                     }
@@ -34,11 +37,20 @@ struct HomeView: View {
                     .padding(.top, 2)
                     .padding(.bottom, 22)
                 }
+                .simultaneousGesture(
+                    DragGesture(minimumDistance: 1)
+                        .onChanged { _ in
+                            markUserScrolled()
+                        }
+                )
 //                .border(.green)
             }
         }
         .navigationBarHidden(true)
         .task(id: queryToken) {
+            userScrolledSinceLastPageLoad = false
+            visibleAutoLoadTriggerID = nil
+            lastAutoLoadTriggerID = nil
             let shouldDebounce = store.hasLoadedContent
             if shouldDebounce {
                 try? await Task.sleep(for: .milliseconds(350))
@@ -63,7 +75,13 @@ struct HomeView: View {
         } else if store.posts.isEmpty {
             EmptyFeedView()
         } else {
-            FeedGrid(postColumns: store.postColumns, favoriteIDs: favoriteIDs, onToggleFavorite: onToggleFavorite)
+            FeedGrid(
+                postColumns: store.postColumns,
+                favoriteIDs: favoriteIDs,
+                onToggleFavorite: onToggleFavorite,
+                onPostAppear: handlePostAppear,
+                onPostDisappear: handlePostDisappear
+            )
             FeedFooter(
                 isLoading: store.isLoadingPage,
                 canLoadMore: store.canLoadMore,
@@ -86,6 +104,40 @@ struct HomeView: View {
     private func submitSearch() {
         submittedSearchText = searchDraftText.trimmingCharacters(in: .whitespacesAndNewlines)
         searchSubmissionID += 1
+    }
+
+    private func markUserScrolled() {
+        guard !store.isLoadingInitial && !store.isLoadingPage else { return }
+        userScrolledSinceLastPageLoad = true
+        triggerAutoLoadMoreIfNeeded(triggerID: visibleAutoLoadTriggerID)
+    }
+
+    private func handlePostAppear(_ id: InspirationPost.ID) {
+        guard autoLoadTriggerIDs.contains(id) else { return }
+        visibleAutoLoadTriggerID = id
+        triggerAutoLoadMoreIfNeeded(triggerID: id)
+    }
+
+    private func handlePostDisappear(_ id: InspirationPost.ID) {
+        if visibleAutoLoadTriggerID == id {
+            visibleAutoLoadTriggerID = nil
+        }
+    }
+
+    private func triggerAutoLoadMoreIfNeeded(triggerID: InspirationPost.ID?) {
+        guard let triggerID else { return }
+        guard userScrolledSinceLastPageLoad else { return }
+        guard store.canLoadMore else { return }
+        guard autoLoadTriggerIDs.contains(triggerID) else { return }
+        guard lastAutoLoadTriggerID != triggerID else { return }
+        lastAutoLoadTriggerID = triggerID
+        userScrolledSinceLastPageLoad = false
+        Task { await store.loadNextPage() }
+    }
+
+    private var autoLoadTriggerIDs: Set<InspirationPost.ID> {
+        guard store.canLoadMore else { return [] }
+        return Set(store.posts.suffix(4).map(\.id))
     }
 
     private static func apiQuery(searchText: String, channel: String) -> String {
@@ -132,6 +184,8 @@ private struct FeedGrid: View {
     let postColumns: [[InspirationPost]]
     let favoriteIDs: Set<InspirationPost.ID>
     var onToggleFavorite: (InspirationPost) -> Void
+    var onPostAppear: (InspirationPost.ID) -> Void
+    var onPostDisappear: (InspirationPost.ID) -> Void
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -146,6 +200,12 @@ private struct FeedGrid: View {
                                 onToggleFavorite: onToggleFavorite
                             )
                             .equatable()
+                            .onAppear {
+                                onPostAppear(post.id)
+                            }
+                            .onDisappear {
+                                onPostDisappear(post.id)
+                            }
                         }
                         .buttonStyle(.plain)
                     }
@@ -254,9 +314,20 @@ private struct FeedFooter: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 14)
             } else if canLoadMore {
-                Color.clear
-                    .frame(height: 1)
-                    .onAppear(perform: onLoadMore)
+                Button(action: onLoadMore) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "arrow.down.circle.fill")
+                        Text("加载更多")
+                    }
+                    .font(.system(size: 13, weight: .heavy))
+                    .foregroundStyle(HuahuoTheme.accent)
+                    .padding(.horizontal, 14)
+                    .frame(height: 34)
+                    .background(.white.opacity(0.7), in: Capsule())
+                }
+                .buttonStyle(.plain)
+                .padding(.vertical, 12)
+                .frame(maxWidth: .infinity)
             }
         }
     }

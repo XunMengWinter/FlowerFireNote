@@ -68,6 +68,7 @@ final class UnsplashFeedStore: ObservableObject {
     @Published private(set) var isRateLimited = false
 
     private static let feedColumnCount = 2
+    private static let fixedCardHeightWeight = 0.42
 
     private let client: UnsplashAPIClient
     private var activeQuery = UnsplashConfig.defaultQuery
@@ -76,6 +77,7 @@ final class UnsplashFeedStore: ObservableObject {
     private var totalPages = 1
     private var loadedIDs = Set<InspirationPost.ID>()
     private var columnHeights = UnsplashFeedStore.emptyColumnHeights()
+    private var columnCounts = UnsplashFeedStore.emptyColumnCounts()
 
     init(client: UnsplashAPIClient = UnsplashAPIClient()) {
         self.client = client
@@ -109,17 +111,21 @@ final class UnsplashFeedStore: ObservableObject {
         defer { isLoadingInitial = false }
 
         do {
+            Self.logPageRequest("request page 1 query=\"\(normalizedQuery)\" perPage=\(UnsplashConfig.perPage)")
             let searchPage = try await client.searchPhotos(query: normalizedQuery, page: 1)
             guard isCurrentReload(query: normalizedQuery, token: token) else { return }
             page = 1
             totalPages = max(searchPage.totalPages, 1)
-            appendUniquePosts(searchPage.posts)
+            let appendedCount = appendUniquePosts(searchPage.posts)
+            Self.logPageRequest("loaded page 1/\(totalPages) results=\(searchPage.posts.count) appended=\(appendedCount) columns=\(columnCountsDescription)")
         } catch is CancellationError {
+            Self.logPageRequest("cancelled page 1 query=\"\(normalizedQuery)\"")
             return
         } catch {
             guard isCurrentReload(query: normalizedQuery, token: token) else { return }
             isRateLimited = Self.isRateLimitError(error)
             errorMessage = Self.displayMessage(for: error)
+            Self.logPageRequest("failed page 1 query=\"\(normalizedQuery)\" error=\"\(errorMessage ?? error.localizedDescription)\"")
         }
 
     }
@@ -136,17 +142,21 @@ final class UnsplashFeedStore: ObservableObject {
         let token = activeQueryToken
 
         do {
+            Self.logPageRequest("request page \(nextPage) query=\"\(query)\" perPage=\(UnsplashConfig.perPage)")
             let searchPage = try await client.searchPhotos(query: query, page: nextPage)
             guard isCurrentReload(query: query, token: token) else { return }
             page = nextPage
             totalPages = max(searchPage.totalPages, 1)
-            appendUniquePosts(searchPage.posts)
+            let appendedCount = appendUniquePosts(searchPage.posts)
+            Self.logPageRequest("loaded page \(nextPage)/\(totalPages) results=\(searchPage.posts.count) appended=\(appendedCount) columns=\(columnCountsDescription)")
         } catch is CancellationError {
+            Self.logPageRequest("cancelled page \(nextPage) query=\"\(query)\"")
             return
         } catch {
             guard isCurrentReload(query: query, token: token) else { return }
             isRateLimited = Self.isRateLimitError(error)
             errorMessage = Self.displayMessage(for: error)
+            Self.logPageRequest("failed page \(nextPage) query=\"\(query)\" error=\"\(errorMessage ?? error.localizedDescription)\"")
         }
 
     }
@@ -163,26 +173,31 @@ final class UnsplashFeedStore: ObservableObject {
         posts.first { $0.id == id }
     }
 
-    private func appendUniquePosts(_ newPosts: [InspirationPost]) {
+    @discardableResult
+    private func appendUniquePosts(_ newPosts: [InspirationPost]) -> Int {
         var uniquePosts: [InspirationPost] = []
         for post in newPosts where !loadedIDs.contains(post.id) {
             uniquePosts.append(post)
             loadedIDs.insert(post.id)
         }
 
-        guard !uniquePosts.isEmpty else { return }
+        guard !uniquePosts.isEmpty else { return 0 }
 
         posts.append(contentsOf: uniquePosts)
 
         var nextColumns = postColumns
         var nextHeights = columnHeights
+        var nextCounts = columnCounts
         for post in uniquePosts {
-            let target = nextHeights[0] <= nextHeights[1] ? 0 : 1
+            let target = targetColumn(heights: nextHeights, counts: nextCounts)
             nextColumns[target].append(post)
-            nextHeights[target] += post.heightWeight
+            nextHeights[target] += Self.weight(for: post)
+            nextCounts[target] += 1
         }
         postColumns = nextColumns
         columnHeights = nextHeights
+        columnCounts = nextCounts
+        return uniquePosts.count
     }
 
     private func resetLoadedPosts() {
@@ -190,6 +205,7 @@ final class UnsplashFeedStore: ObservableObject {
         postColumns = Self.emptyPostColumns()
         loadedIDs = []
         columnHeights = Self.emptyColumnHeights()
+        columnCounts = Self.emptyColumnCounts()
     }
 
     private static func emptyPostColumns() -> [[InspirationPost]] {
@@ -198,6 +214,28 @@ final class UnsplashFeedStore: ObservableObject {
 
     private static func emptyColumnHeights() -> [Double] {
         Array(repeating: 0, count: feedColumnCount)
+    }
+
+    private static func emptyColumnCounts() -> [Int] {
+        Array(repeating: 0, count: feedColumnCount)
+    }
+
+    private func targetColumn(heights: [Double], counts: [Int]) -> Int {
+        if counts[0] < counts[1] {
+            return 0
+        }
+        if counts[1] < counts[0] {
+            return 1
+        }
+        return heights[0] <= heights[1] ? 0 : 1
+    }
+
+    private static func weight(for post: InspirationPost) -> Double {
+        post.heightWeight + fixedCardHeightWeight
+    }
+
+    private var columnCountsDescription: String {
+        columnCounts.map(String.init).joined(separator: "/")
     }
 
     private func isCurrentReload(query: String, token: String?) -> Bool {
@@ -221,6 +259,12 @@ final class UnsplashFeedStore: ObservableObject {
 
     private static func isRateLimitError(_ error: Error) -> Bool {
         (error as? UnsplashAPIError)?.isRateLimitExceeded == true
+    }
+
+    private static func logPageRequest(_ message: String) {
+        #if DEBUG
+        print("[UnsplashFeedStore] \(message)")
+        #endif
     }
 }
 
